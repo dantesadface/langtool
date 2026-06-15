@@ -19,7 +19,8 @@ extension NSWindow {
 
 /// A review popup that shows the original text and the suggested result before
 /// it replaces the selection. The suggestion is editable so the user can tweak
-/// it, then choose Replace, Copy, or Cancel.
+/// it. In translate mode it also offers a target-language dropdown to
+/// re-translate on the spot. Choose Replace, Copy, or Cancel.
 final class ResultPreviewController: NSWindowController {
     static let shared = ResultPreviewController()
 
@@ -27,12 +28,23 @@ final class ResultPreviewController: NSWindowController {
     private let originalView = NSTextView()
     private let suggestionView = NSTextView()
 
+    private let languageRow = NSStackView()
+    private let sourcePopup = NSPopUpButton()
+    private let languagePopup = NSPopUpButton()
+    private let spinner = NSProgressIndicator()
+
+    private var replaceButton: NSButton!
+    private var copyButton: NSButton!
+
     private var onReplace: ((String) -> Void)?
     private var onCopy: ((String) -> Void)?
+    /// Produce a fresh translation of the original text using the current
+    /// source/target language settings.
+    private var retranslate: (() async throws -> String)?
 
     private convenience init() {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 520, height: 420),
+            contentRect: NSRect(x: 0, y: 0, width: 520, height: 460),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -43,19 +55,33 @@ final class ResultPreviewController: NSWindowController {
         buildUI()
     }
 
-    /// Present the popup. `replace` is called with the (possibly edited) text
-    /// when the user accepts; `copy` when they choose Copy.
+    /// Present the popup. `retranslate` is provided for translate mode (enables
+    /// the language dropdown); pass `nil` for grammar mode to hide it.
     func present(mode: TransformMode,
                  original: String,
                  suggestion: String,
+                 retranslate: (() async throws -> String)?,
                  replace: @escaping (String) -> Void,
                  copy: @escaping (String) -> Void) {
-        onReplace = replace
-        onCopy = copy
+        self.onReplace = replace
+        self.onCopy = copy
+        self.retranslate = retranslate
 
         titleLabel.stringValue = mode == .translate ? "Translation" : "Grammar suggestion"
         originalView.string = original
         suggestionView.string = suggestion
+
+        // Language dropdowns only apply to translation.
+        languageRow.isHidden = (retranslate == nil)
+        if retranslate != nil {
+            sourcePopup.removeAllItems()
+            sourcePopup.addItems(withTitles: Settings.sourceLanguages)
+            sourcePopup.selectItem(withTitle: Settings.shared.sourceLanguage)
+            languagePopup.removeAllItems()
+            languagePopup.addItems(withTitles: Settings.targetLanguages)
+            languagePopup.selectItem(withTitle: Settings.shared.targetLanguage)
+        }
+        setBusy(false)
 
         NSApp.activate(ignoringOtherApps: true)
         window?.centerOnActiveScreen()
@@ -70,17 +96,32 @@ final class ResultPreviewController: NSWindowController {
 
         titleLabel.font = NSFont.boldSystemFont(ofSize: 13)
 
+        // Language row: "From:" [source] "To:" [target] (spinner)
+        let fromLabel = rowLabel("From:")
+        let toLabel = rowLabel("To:")
+        sourcePopup.target = self
+        sourcePopup.action = #selector(languageChanged)
+        languagePopup.target = self
+        languagePopup.action = #selector(languageChanged)
+        spinner.style = .spinning
+        spinner.controlSize = .small
+        spinner.isDisplayedWhenStopped = false
+        languageRow.orientation = .horizontal
+        languageRow.spacing = 6
+        languageRow.alignment = .centerY
+        languageRow.setViews([fromLabel, sourcePopup, toLabel, languagePopup, spinner], in: .leading)
+
         let originalHeader = sectionLabel("Original")
         let suggestionHeader = sectionLabel("Suggestion (editable)")
 
         let originalScroll = makeTextScroll(originalView, editable: false)
         let suggestionScroll = makeTextScroll(suggestionView, editable: true)
 
-        let replaceButton = NSButton(title: "Replace", target: self, action: #selector(replaceTapped))
-        replaceButton.keyEquivalent = "\r" // ⌘? no — Return triggers default
+        replaceButton = NSButton(title: "Replace", target: self, action: #selector(replaceTapped))
+        replaceButton.keyEquivalent = "\r"
         replaceButton.bezelStyle = .rounded
 
-        let copyButton = NSButton(title: "Copy", target: self, action: #selector(copyTapped))
+        copyButton = NSButton(title: "Copy", target: self, action: #selector(copyTapped))
         copyButton.bezelStyle = .rounded
 
         let cancelButton = NSButton(title: "Cancel", target: self, action: #selector(cancelTapped))
@@ -93,6 +134,7 @@ final class ResultPreviewController: NSWindowController {
 
         let stack = NSStackView(views: [
             titleLabel,
+            languageRow,
             originalHeader, originalScroll,
             suggestionHeader, suggestionScroll,
             buttonRow
@@ -102,6 +144,7 @@ final class ResultPreviewController: NSWindowController {
         stack.spacing = 6
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.setHuggingPriority(.defaultLow, for: .horizontal)
+        stack.setCustomSpacing(12, after: languageRow)
 
         content.addSubview(stack)
         NSLayoutConstraint.activate([
@@ -116,6 +159,13 @@ final class ResultPreviewController: NSWindowController {
             suggestionScroll.heightAnchor.constraint(equalToConstant: 150),
             buttonRow.trailingAnchor.constraint(equalTo: stack.trailingAnchor)
         ])
+    }
+
+    private func rowLabel(_ text: String) -> NSTextField {
+        let l = NSTextField(labelWithString: text)
+        l.font = NSFont.systemFont(ofSize: 12)
+        l.textColor = .secondaryLabelColor
+        return l
     }
 
     private func sectionLabel(_ text: String) -> NSTextField {
@@ -145,7 +195,42 @@ final class ResultPreviewController: NSWindowController {
         return scroll
     }
 
+    /// Disables controls and shows the spinner while a re-translation runs.
+    private func setBusy(_ busy: Bool) {
+        busy ? spinner.startAnimation(nil) : spinner.stopAnimation(nil)
+        languagePopup.isEnabled = !busy
+        replaceButton.isEnabled = !busy
+        copyButton.isEnabled = !busy
+        suggestionView.isEditable = !busy
+    }
+
     // MARK: - Actions
+
+    @objc private func languageChanged() {
+        guard let retranslate else { return }
+        if let source = sourcePopup.titleOfSelectedItem {
+            Settings.shared.sourceLanguage = source
+        }
+        if let target = languagePopup.titleOfSelectedItem {
+            Settings.shared.targetLanguage = target
+        }
+        setBusy(true)
+        Task {
+            do {
+                let result = try await retranslate()
+                await MainActor.run {
+                    self.suggestionView.string = result
+                    self.setBusy(false)
+                }
+            } catch {
+                await MainActor.run {
+                    self.setBusy(false)
+                    Notifier.show(title: "Re-translation failed",
+                                  body: error.localizedDescription)
+                }
+            }
+        }
+    }
 
     @objc private func replaceTapped() {
         let text = suggestionView.string

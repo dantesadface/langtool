@@ -58,10 +58,18 @@ final class TextProcessor {
 
     @MainActor
     private func presentPreview(mode: TransformMode, original: String, suggestion: String) {
+        // In translate mode, let the popup re-translate when the user changes
+        // the source/target language. The popup updates Settings before calling
+        // this closure, so transform() picks up the new languages.
+        let retranslate: (() async throws -> String)? = mode == .translate
+            ? { [client] in try await client.transform(original, mode: .translate) }
+            : nil
+
         ResultPreviewController.shared.present(
             mode: mode,
             original: original,
             suggestion: suggestion,
+            retranslate: retranslate,
             replace: { [weak self] finalText in
                 self?.applyReplacement(finalText)
             },
