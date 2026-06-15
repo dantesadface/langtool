@@ -19,6 +19,7 @@ final class AboutWindowController: NSWindowController {
 
     func show() {
         NSApp.activate(ignoringOtherApps: true)
+        window?.centerOnActiveScreen()
         window?.makeKeyAndOrderFront(nil)
     }
 

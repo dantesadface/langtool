@@ -1,5 +1,22 @@
 import AppKit
 
+extension NSWindow {
+    /// Centers the window on whichever screen currently contains the mouse
+    /// cursor, so popups appear where the user is actually working rather than
+    /// on a fixed display.
+    func centerOnActiveScreen() {
+        let mouse = NSEvent.mouseLocation
+        let screen = NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) }
+            ?? NSScreen.main
+        guard let area = screen?.visibleFrame else { center(); return }
+
+        let size = frame.size
+        let originX = area.midX - size.width / 2
+        let originY = area.midY - size.height / 2
+        setFrameOrigin(NSPoint(x: originX, y: originY))
+    }
+}
+
 /// A review popup that shows the original text and the suggested result before
 /// it replaces the selection. The suggestion is editable so the user can tweak
 /// it, then choose Replace, Copy, or Cancel.
@@ -41,6 +58,7 @@ final class ResultPreviewController: NSWindowController {
         suggestionView.string = suggestion
 
         NSApp.activate(ignoringOtherApps: true)
+        window?.centerOnActiveScreen()
         window?.makeKeyAndOrderFront(nil)
         window?.makeFirstResponder(suggestionView)
     }

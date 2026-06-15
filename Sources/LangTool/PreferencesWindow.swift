@@ -11,11 +11,6 @@ final class PreferencesWindowController: NSWindowController {
     private let previewCheckbox = NSButton(checkboxWithTitle: "Preview suggestion before replacing",
                                            target: nil, action: nil)
 
-    private let languages = [
-        "Auto-detect", "English", "Tagalog", "Cebuano", "Spanish",
-        "Japanese", "Korean", "Chinese", "French", "German"
-    ]
-
     private let models: [(label: String, id: String)] = [
         ("Haiku 4.5 (fast, cheap)", "claude-haiku-4-5-20251001"),
         ("Sonnet 4.6 (balanced)", "claude-sonnet-4-6"),
@@ -38,6 +33,7 @@ final class PreferencesWindowController: NSWindowController {
     func show() {
         loadValues()
         NSApp.activate(ignoringOtherApps: true)
+        window?.centerOnActiveScreen()
         window?.makeKeyAndOrderFront(nil)
     }
 
@@ -60,8 +56,8 @@ final class PreferencesWindowController: NSWindowController {
         apiKeyField.placeholderString = "sk-ant-..."
         apiKeyField.widthAnchor.constraint(equalToConstant: 250).isActive = true
 
-        sourcePopup.addItems(withTitles: languages)
-        targetPopup.addItems(withTitles: languages)
+        sourcePopup.addItems(withTitles: Settings.sourceLanguages)
+        targetPopup.addItems(withTitles: Settings.targetLanguages)
         for model in models { modelPopup.addItem(withTitle: model.label) }
 
         let hint = NSTextField(wrappingLabelWithString:

@@ -4,6 +4,15 @@ import Foundation
 final class Settings {
     static let shared = Settings()
 
+    /// Languages you can translate *to*.
+    static let targetLanguages = [
+        "English", "Tagalog", "Cebuano", "Spanish",
+        "Japanese", "Korean", "Chinese", "French", "German"
+    ]
+
+    /// Languages you can translate *from* — adds Auto-detect.
+    static let sourceLanguages = ["Auto-detect"] + targetLanguages
+
     private let defaults = UserDefaults.standard
 
     private enum Keys {

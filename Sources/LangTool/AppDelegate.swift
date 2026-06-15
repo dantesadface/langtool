@@ -78,6 +78,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(.separator())
 
+        // "Translate To" submenu — quick target-language switch.
+        let translateToItem = NSMenuItem(title: "Translate To", action: nil, keyEquivalent: "")
+        let languageMenu = NSMenu()
+        let current = Settings.shared.targetLanguage
+        for language in Settings.targetLanguages {
+            let item = NSMenuItem(title: language,
+                                  action: #selector(selectTargetLanguage(_:)),
+                                  keyEquivalent: "")
+            item.target = self
+            item.state = (language == current) ? .on : .off
+            languageMenu.addItem(item)
+        }
+        translateToItem.submenu = languageMenu
+        menu.addItem(translateToItem)
+
+        menu.addItem(.separator())
+
         let prefsItem = NSMenuItem(title: "Preferences…",
                                    action: #selector(openPreferences),
                                    keyEquivalent: ",")
@@ -110,6 +127,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func translate() { TextProcessor.shared.run(mode: .translate) }
     @objc private func fixGrammar() { TextProcessor.shared.run(mode: .grammar) }
+
+    @objc private func selectTargetLanguage(_ sender: NSMenuItem) {
+        Settings.shared.targetLanguage = sender.title
+        // Rebuild so the checkmark moves to the new selection.
+        statusItem?.menu = buildMenu()
+    }
     @objc private func openPreferences() { PreferencesWindowController.shared.show() }
     @objc private func openAbout() { AboutWindowController.shared.show() }
     @objc private func openAccessibility() { PermissionManager.openAccessibilitySettings() }
