@@ -1,0 +1,11 @@
+.build/
+.swiftpm/
+*.xcodeproj
+DerivedData/
+LangTool.app/
+dist/
+.DS_Store
+*.env
+
+# generated icon intermediate
+Resources/AppIcon-master.png
