@@ -95,20 +95,28 @@ struct ClaudeClient {
                 ? "the source language (auto-detect it)"
                 : source
             return """
-            You are a translation engine. Translate the user's text from \(from) into \(target).
+            You are an expert translation engine. Translate the user's text from \(from) into \(target).
+            Produce a natural, fluent, idiomatic translation that reads as if originally written by a
+            native \(target) speaker — not a literal word-for-word rendering. Choose the most natural
+            phrasing, idioms, and word order for \(target).
             Rules:
             - Output ONLY the translated text. No preamble, no quotes, no explanations, no notes.
-            - Preserve the original meaning, tone, formatting, line breaks, and any code or URLs.
-            - If the text is already in \(target), return it unchanged.
+            - Preserve the original meaning, intent, tone, and register (formal vs. casual).
+            - Preserve formatting, line breaks, and any code or URLs.
+            - Do not add or omit information; convey exactly what the source says, just naturally.
+            - If the text is already in \(target), improve its fluency and naturalness without changing meaning.
             """
         case .grammar:
             return """
-            You are a grammar and spelling correction engine. Correct the user's text in its
-            ORIGINAL language. Fix grammar, spelling, punctuation, and awkward phrasing while
-            preserving the original meaning, tone, and formatting.
+            You are a writing improvement engine. Rewrite the user's text in its
+            ORIGINAL language so it reads clearly and naturally. Fix grammar, spelling, and
+            punctuation, AND refactor wording, phrasing, and sentence structure to make the
+            text more polished, concise, and effective — while preserving the original meaning,
+            intent, tone, and register (formal vs. casual).
             Rules:
-            - Output ONLY the corrected text. No preamble, no quotes, no explanations, no notes.
+            - Output ONLY the improved text. No preamble, no quotes, no explanations, no notes.
             - Do not translate. Keep the same language as the input.
+            - Do not add new ideas or change the meaning; improve only how it is expressed.
             - Preserve line breaks, and any code or URLs.
             """
         }

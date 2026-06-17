@@ -69,7 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         translateItem.target = self
         menu.addItem(translateItem)
 
-        let grammarItem = NSMenuItem(title: "Fix Grammar in Selection",
+        let grammarItem = NSMenuItem(title: "Improve Writing in Selection",
                                      action: #selector(fixGrammar),
                                      keyEquivalent: "g")
         grammarItem.keyEquivalentModifierMask = [.option, .command]

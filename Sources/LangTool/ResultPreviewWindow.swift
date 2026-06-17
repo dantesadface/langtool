@@ -67,7 +67,7 @@ final class ResultPreviewController: NSWindowController {
         self.onCopy = copy
         self.retranslate = retranslate
 
-        titleLabel.stringValue = mode == .translate ? "Translation" : "Grammar suggestion"
+        titleLabel.stringValue = mode == .translate ? "Translation" : "Writing suggestion"
         originalView.string = original
         suggestionView.string = suggestion
 

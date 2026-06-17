@@ -61,7 +61,7 @@ final class PreferencesWindowController: NSWindowController {
         for model in models { modelPopup.addItem(withTitle: model.label) }
 
         let hint = NSTextField(wrappingLabelWithString:
-            "Hotkeys:  ⌥⌘T translate   ·   ⌥⌘G fix grammar\nSelect text in any app, then press a hotkey.")
+            "Hotkeys:  ⌥⌘T translate   ·   ⌥⌘G improve writing\nSelect text in any app, then press a hotkey.")
         hint.font = NSFont.systemFont(ofSize: 11)
         hint.textColor = .secondaryLabelColor
         hint.translatesAutoresizingMaskIntoConstraints = false
