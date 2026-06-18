@@ -15,7 +15,10 @@ cd "$ROOT"
 APP_NAME="LangTool"
 DIST="$ROOT/dist"
 APP="$DIST/$APP_NAME.app"
-DMG="$DIST/$APP_NAME.dmg"
+
+# Version-stamp the DMG filename so old/new builds are easy to tell apart.
+VERSION="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$ROOT/Resources/Info.plist" 2>/dev/null || echo "0")"
+DMG="$DIST/$APP_NAME-$VERSION.dmg"
 STAGE="$(mktemp -d)/dmg"
 
 # Build the .app first (without installing).
@@ -29,7 +32,7 @@ ln -s /Applications "$STAGE/Applications"
 echo "==> Creating DMG…"
 rm -f "$DMG"
 hdiutil create \
-    -volname "$APP_NAME" \
+    -volname "$APP_NAME $VERSION" \
     -srcfolder "$STAGE" \
     -ov \
     -format UDZO \
